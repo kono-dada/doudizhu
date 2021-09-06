@@ -1,0 +1,77 @@
+//已废弃，这是识别飞机的沙雕过程
+/*
+    吐了，头一次写这么复杂的
+    先把有三张的挑出来，分为以下情况：
+        1.飞机不带单牌 -> 判断三连是否为数字连续的n组
+        2.三飞带的三张牌是同一张牌(总共12张牌) -> 判断是否存在三组数字连续的三连
+        3.正常的飞机 -> 判断三连是否为数字连续的n组，并且单牌数量与三连组数一样
+
+fun CardSet.isPlane(): Plane? {
+    //求某张牌在this中的出现次数
+    fun time(card: Card): Int {
+        var n = 0
+        forEach {
+            if (it == card) n += 1
+        }
+        return n
+    }
+
+    val set = toSet()
+    if (size % 4 == 0) {
+        val timesMap = set.associateWith { time(it) }  //牌与其在this中出现次数的映射
+        val triple = mapNotNull { if (timesMap[it] == 3) it else null }.toCardSet()  //含有三张的牌
+        triple.sortByValue()
+        removeAll(triple)//只剩下没有出现三次的牌
+        if (triple.size != size) {
+            if (size == 0) {  //如果单牌的数量与三连的数量不符合且单牌不是0张
+                if (triple.size == 4) {  //有可能是333444555777这种三飞带的单牌是同一张
+                    return if (triple[2].value - triple[1].value == 1) {
+                        when {
+                            triple[1].value - triple[0].value == 1 -> Plane(
+                                triple.subList(0, 3).toCardSet(),
+                                triple.subList(3, 4).toCardSet()
+                            )
+                            triple[3].value - triple[2].value == 1 -> Plane(
+                                triple.subList(1, 4).toCardSet(),
+                                triple.subList(0, 1).toCardSet()
+                            )
+                            else -> null
+                        }
+                    } else null
+                } else { //有可能是多连飞，不带单
+                    for (i in (0 until triple.size - 1)) {
+                        if (triple[i + 1].value - triple[i].value != 1) return null
+                    }
+                    return Plane(triple, CardSet())
+                }
+            } else return null
+        }
+        for (i in (0 until triple.size - 1)) {  //排除上述情况后，判断三连是否连续
+            if (triple[i + 1].value - triple[i].value != 1) return null
+        }
+        return Plane(triple, this)
+    } else return null
+}
+*/
+
+//识别四带二的旧过程
+ /*
+    val set = toSet()
+    return if (size == 6) {
+        var qua = Card.NOT_A_CARD
+        for (card in set) {
+            var times = 0
+            for (i in this) {
+                if (i == card) times += 1
+            }
+            if (times == 4) {
+                qua = card
+                break
+            }
+        }
+        return if (qua != Card.NOT_A_CARD) {
+            this.remove(qua)
+            QuadrupleWithTwoSingles(qua, this)
+        } else null
+    } else null
+     */
