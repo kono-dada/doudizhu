@@ -1,8 +1,6 @@
 package dada.douDiZhu
 
-import dada.addPoints
 import dada.douDiZhu.data.*
-import dada.pay
 import kotlinx.coroutines.CompletableJob
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -56,6 +54,8 @@ class Game(private val gameGroup: Group, private val basicBet: Int = 200) : Comp
                     this.intercept()
                     "已经有一个游戏了"
                 }
+                //强制结束游戏
+                //只有Config中的admin可以结束游戏
                 (case("结束游戏") and sentFrom(gameGroup)) {
                     if (sender.id in Config.admin) {
                         group.sendMessage("结束成功")
@@ -218,12 +218,12 @@ class Game(private val gameGroup: Group, private val basicBet: Int = 200) : Comp
                     val rawCardsString = message.content.substring(1)
                     val deserializedCards = rawCardsString.deserializeToCard()
                     if (!(player.handCards() have deserializedCards)) {
-                        player.sendMessage("明乃没在你的牌中找到你想出的牌哦")
+                        player.sendMessage("没在你的牌中找到你想出的牌哦")
                         return@playCard
                     }
                     val comb = deserializedCards.findCombination() //玩家想出的牌
                     if (comb == NotACombination) {
-                        player.sendMessage("明乃没看懂你想要出什么牌啦")
+                        player.sendMessage("没看懂你想要出什么牌啦")
                         return@playCard
                     }
                     /*
@@ -248,8 +248,8 @@ class Game(private val gameGroup: Group, private val basicBet: Int = 200) : Comp
                             reply("炸弹！<${player.nick}>出了$comb")
                             reply("当前倍率：$magnification")
                         } else reply("<${player.nick}>出了$comb")
-                        if (player.handCards().size == 2) reply("<${player.nick}>只剩两张牌了哦！明乃感觉ta要赢了")
-                        if (player.handCards().size == 1) reply("<${player.nick}>只剩一张牌了哦！明乃感觉ta要赢了")
+                        if (player.handCards().size == 2) reply("<${player.nick}>只剩两张牌了哦！感觉ta要赢了")
+                        if (player.handCards().size == 1) reply("<${player.nick}>只剩一张牌了哦！感觉ta要赢了")
 
                         //获胜判断
                         if (player.handCards().size == 0) {
@@ -297,26 +297,14 @@ class Game(private val gameGroup: Group, private val basicBet: Int = 200) : Comp
             player.douDiZhuData.gameTimes += 1
         }
 
-        val amount = basicBet * magnification
+        basicBet * magnification
         if (winner == table.diZhu) {
-            winner.addPoints(amount * 2)
-            table.nongMin.forEach {
-                it.pay(amount)
-            }
             reply(
-                "地主赢了\n" +
-                        "<${winner.nick}>赢得了${amount * 2}个明乃币\n" + "\n" +
-                        "<${table.nongMin[0]}.nick>、<${table.nongMin[1].nick}>输掉了${amount}个明乃币"
+                "恭喜地主赢了"
             )
         } else {
-            table.diZhu.pay(amount * 2)
-            table.nongMin.forEach {
-                it.addPoints(amount)
-            }
             reply(
-                "农民赢了\n" +
-                        "<${table.nongMin[0].nick}>、<${table.nongMin[1].nick}>赢得了了${amount}个明乃币" + "\n" +
-                        "<${table.diZhu.nick}>输掉了${amount * 2}个明乃币\n"
+                "恭喜农民赢了"
             )
         }
     }

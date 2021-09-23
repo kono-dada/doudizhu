@@ -23,7 +23,6 @@ fun String.deserializeToCard(): CardSet {
     }
     find10()
     //结束10的处理，剩下的字符串中没有10.
-    DouDiZhu.logger.info("字符串：$raw")
     raw.forEach { cardSet += Card.deserializeFromString(it.toString()) }
     return cardSet
 }
