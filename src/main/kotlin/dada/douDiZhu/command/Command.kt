@@ -12,8 +12,16 @@ object Command : CompositeCommand(
     //查询玩家的胜率
     @SubCommand("me")
     suspend fun UserCommandSender.me() {
-        subject.sendMessage("<${user.nick}>总共进行了${user.gameTimes}场游戏，获胜${user.winTimes}场，胜率${user.winRate}")
+        subject.sendMessage("<${user.nick}>现在有${user.data.coins}个point，总共进行了${user.gameTimes}场游戏，" +
+                "获胜${user.winTimes}场，胜率${user.winRate}")
     }
+
+    @SubCommand("beg")
+    suspend fun UserCommandSender.beg() {
+        val msg = user.data.dailyApply()
+        subject.sendMessage(msg)
+    }
+
 }
 
 /**

@@ -13,3 +13,16 @@ val User.gameTimes
 
 val User.winRate
     get() = winTimes.toFloat() / gameTimes.toFloat()
+
+val User.data
+    get() = PlayerData.data.getOrPut(this.id) { CustomData() }
+
+fun User.addPoints(number: Int) {
+    this.data.addPoints(number)
+}
+
+fun User.pay(number: Int) {
+    this.data.pay(number)
+}
+
+fun User.enough(number: Int): Boolean = this.data.coins >= number
