@@ -234,7 +234,11 @@ fun CardSet.isDoubleSeries(): DoubleSeries? {
     sortByValue()
     return if (this[lastIndex].value <= 12 && this.size >= 6) {
         for (i in ((0..size - 3) step 2)) {
-            if (this[i + 2].value - this[i].value != 1 || this[i] != this[i + 1]) return null
+            if (
+                this[i + 2].value - this[i].value != 1 ||
+                this[i] != this[i + 1] ||
+                this[i + 2].value != this[i + 3].value
+            ) return null
         }
         return DoubleSeries(this[0], this[lastIndex])
     } else null
