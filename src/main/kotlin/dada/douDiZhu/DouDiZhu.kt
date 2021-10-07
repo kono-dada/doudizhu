@@ -36,7 +36,7 @@ object DouDiZhu : KotlinPlugin(
                 //只有允许的群聊可以玩斗地主
                 if (group.id in Config.groups) {
                     launch { Game(group).gameStart() }
-                    subject.sendMessage("创建成功！发送“上桌”即可参与游戏")
+                    subject.sendMessage("创建成功（底分：200）！发送“上桌”即可参与游戏")
                 }
             }
         }

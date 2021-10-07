@@ -8,7 +8,7 @@ package dada.douDiZhu.data
 例如[三带一][TripleWithSingle] 4445中，用于比较大小的牌就是4
  */
 open class Combination(private val comparableCard: Card) {
-    fun sameType(another: Combination): Boolean = this::class == another::class
+    fun sameType(another: Combination): Boolean = (this::class == another::class || (this is Bomb && another is Bomb))
 
     open operator fun compareTo(other: Combination): Int = when {
         comparableCard > other.comparableCard -> 1

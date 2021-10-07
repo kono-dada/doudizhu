@@ -85,9 +85,9 @@ class Game(private val gameGroup: Group, private val basicBet: Int = 200) : Comp
         }
         val job = scopedChannel.subscribeGroupMessages {
             (case("上桌") and sentFrom(gameGroup)) reply {
-                if (!sender.enough(200)){
+                if (!sender.enough(200)) {
                     "你的point不够200个哦，你没钱了"
-                }else if (table.enter(sender)) {
+                } else if (table.enter(sender)) {
                     "加入成功\n当前玩家：${table.players.map { it.nick }}"
                 } else {
                     "人满了或你已经在游戏中了，无法加入"
@@ -142,7 +142,8 @@ class Game(private val gameGroup: Group, private val basicBet: Int = 200) : Comp
     private suspend fun qiangDiZhu() {
         var qiang = false
         for (player in table.players) {
-            reply(At(player) + PlainText("轮到你抢地主了，是否要抢地主？"))
+            if (this.isActive)
+                reply(At(player) + PlainText("轮到你抢地主了，是否要抢地主？"))
 
             val qiangDiZhuJob = Job(this)
 
@@ -153,14 +154,18 @@ class Game(private val gameGroup: Group, private val basicBet: Int = 200) : Comp
                     .filter { event: GroupMessageEvent -> event.sender == player }
             }
             //2
-            val job = gameEventChannel.subscribeGroupMessages {
-                (case("抢地主") or case("我抢") or case("抢")){
-                    qiang = true
-                    qiangDiZhuJob.cancel()
+            val job = if (this.isActive) {
+                gameEventChannel.subscribeGroupMessages {
+                    (case("抢地主") or case("我抢") or case("抢")){
+                        qiang = true
+                        qiangDiZhuJob.cancel()
+                    }
+                    (case("不抢")){
+                        qiangDiZhuJob.cancel()
+                    }
                 }
-                (case("不抢")){
-                    qiangDiZhuJob.cancel()
-                }
+            } else {
+                return
             }
 
             job.join()
@@ -195,7 +200,8 @@ class Game(private val gameGroup: Group, private val basicBet: Int = 200) : Comp
         for (player in table.iterator()) {
             if (player == lastPlayer) lastCombination = NotACombination
 
-            reply(At(player) + "轮到你出牌了")
+            if (this.isActive)
+                reply(At(player) + "轮到你出牌了")
             val startJob = Job(this)
 
             val gameEventChannel = coroutineScope {
@@ -215,71 +221,73 @@ class Game(private val gameGroup: Group, private val basicBet: Int = 200) : Comp
             以上结果都会迎来onEvent的结束，但只有情况4和情况5会顺利进入下一家的回合
             其中，情况3会直接进入settle环节
              */
-            val job = gameEventChannel.subscribeAlways<MessageEvent> playCard@{
-                if (message.content[0].toString() == "/") {
-                    val rawCardsString = message.content.substring(1)
-                    val deserializedCards = rawCardsString.deserializeToCard()
-                    if (!(player.handCards() have deserializedCards)) {
-                        player.sendMessage("没在你的牌中找到你想出的牌哦")
-                        return@playCard
-                    }
-                    val comb = deserializedCards.findCombination() //玩家想出的牌
-                    if (comb == NotACombination) {
-                        player.sendMessage("没看懂你想要出什么牌啦")
-                        return@playCard
-                    }
-                    /*
-                        有可能可以出牌的情况：
-                        1.牌权回到自己手上
-                        2.出了和上一次相同牌型并且比他大
-                        3.上一次不是炸弹，但这次是炸弹
-                     */
-                    if (
-                        lastCombination == NotACombination
-                        || (lastCombination.sameType(comb)
-                                && comb > lastCombination
-                                && deserializedCards.size == lastCardSet.size)
-                        || (lastCombination !is Bomb && comb is Bomb)
-                    ) {
-                        player.play(deserializedCards)
+            val job = if (this.isActive) {
+                gameEventChannel.subscribeAlways<MessageEvent> playCard@{
+                    if (message.content[0].toString() == "/") {
+                        val rawCardsString = message.content.substring(1)
+                        val deserializedCards = rawCardsString.deserializeToCard()
+                        if (!(player.handCards() have deserializedCards)) {
+                            player.sendMessage("没在你的牌中找到你想出的牌哦")
+                            return@playCard
+                        }
+                        val comb = deserializedCards.findCombination() //玩家想出的牌
+                        if (comb == NotACombination) {
+                            player.sendMessage("没看懂你想要出什么牌啦")
+                            return@playCard
+                        }
                         /*
-                            炸弹有特殊回复，并且翻倍
+                            有可能可以出牌的情况：
+                            1.牌权回到自己手上
+                            2.出了和上一次相同牌型并且比他大
+                            3.上一次不是炸弹，但这次是炸弹
                          */
-                        if (comb is Bomb) {
-                            magnification *= 2
-                            reply("炸弹！<${player.nick}>出了$comb")
-                            reply("当前倍率：$magnification")
-                        } else reply("<${player.nick}>出了$comb")
-                        if (player.handCards().size == 2) reply("<${player.nick}>只剩两张牌了哦！感觉ta要赢了")
-                        if (player.handCards().size == 1) reply("<${player.nick}>只剩一张牌了哦！感觉ta要赢了")
+                        if (
+                            lastCombination == NotACombination
+                            || (lastCombination.sameType(comb)
+                                    && comb > lastCombination
+                                    && deserializedCards.size == lastCardSet.size)
+                            || (lastCombination !is Bomb && comb is Bomb)
+                        ) {
+                            player.play(deserializedCards)
+                            /*
+                                炸弹有特殊回复，并且翻倍
+                             */
+                            if (comb is Bomb) {
+                                magnification *= 2
+                                reply("炸弹！<${player.nick}>出了$comb")
+                                reply("当前倍率：$magnification")
+                            } else reply("<${player.nick}>出了$comb")
+                            if (player.handCards().size == 2) reply("<${player.nick}>只剩两张牌了哦！感觉ta要赢了")
+                            if (player.handCards().size == 1) reply("<${player.nick}>只剩一张牌了哦！感觉ta要赢了")
 
-                        //获胜判断
-                        if (player.handCards().size == 0) {
-                            settle(player)
-                            isRunning = false
+                            //获胜判断
+                            if (player.handCards().size == 0) {
+                                settle(player)
+                                isRunning = false
+                                startJob.cancel()
+                                return@playCard
+                            }
+                            player.sendMessage("你还剩\n ${player.handCards()}")
+
+                            lastCardSet = deserializedCards
+                            lastCombination = comb
+                            lastPlayer = player
                             startJob.cancel()
                             return@playCard
                         }
-                        player.sendMessage("你还剩\n ${player.handCards()}")
-
-                        lastCardSet = deserializedCards
-                        lastCombination = comb
-                        lastPlayer = player
-                        startJob.cancel()
+                        player.sendMessage("你出的牌貌似不符合规则哦")
                         return@playCard
                     }
-                    player.sendMessage("明乃觉得你出的牌不符合规则哦")
-                    return@playCard
-                }
 
-                if (message.content == "要不起" || message.content == "不要" || message.content == "过") {
-                    if (lastPlayer == player) player.sendMessage("这是你的回合，不可以不出哦")
-                    else {
-                        reply("<${player.nick}>选择了不出")
-                        startJob.cancel()
+                    if (message.content == "要不起" || message.content == "不要" || message.content == "过") {
+                        if (lastPlayer == player) player.sendMessage("这是你的回合，不可以不出哦")
+                        else {
+                            reply("<${player.nick}>选择了不出")
+                            startJob.cancel()
+                        }
                     }
                 }
-            }
+            }else return
             job.join()
             if (!isRunning) {
                 this.cancel()
