@@ -4,11 +4,19 @@ import dada.douDiZhu.*
 import net.mamoe.mirai.console.command.CompositeCommand
 import net.mamoe.mirai.console.command.ConsoleCommandSender
 import net.mamoe.mirai.console.command.UserCommandSender
+import net.mamoe.mirai.console.permission.AbstractPermitteeId
+import net.mamoe.mirai.console.permission.PermissionService.Companion.permit
 
 object Command : CompositeCommand(
     DouDiZhu,
     "d",
 ) {
+    @SubCommand("beg")
+    suspend fun UserCommandSender.beg() {
+        val msg = user.data.dailyApply()
+        subject.sendMessage(msg)
+    }
+
     //查询玩家的胜率
     @SubCommand("me")
     suspend fun UserCommandSender.me() {
@@ -16,11 +24,6 @@ object Command : CompositeCommand(
                 "获胜${user.winTimes}场，胜率${user.winRate}")
     }
 
-    @SubCommand("beg")
-    suspend fun UserCommandSender.beg() {
-        val msg = user.data.dailyApply()
-        subject.sendMessage(msg)
-    }
 
 }
 
@@ -35,12 +38,14 @@ object DouDiZhuConsoleCommand : CompositeCommand(
     @SubCommand("addadmin")
     suspend fun ConsoleCommandSender.addAdmin(id: Long) {
         Config.admin.add(id)
+        AbstractPermitteeId.ExactUser(id).permit(Command.permission)
         sendMessage("OK")
     }
 
     @SubCommand("addgroup")
     suspend fun ConsoleCommandSender.addGroup(id: Long) {
         Config.groups.add(id)
+        AbstractPermitteeId.AnyMember(id).permit(Command.permission)
         sendMessage("OK")
     }
 }
